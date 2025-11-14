@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Analytics Pipeline Dashboard</title>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      text-align: center;
+      padding: 25px;
+      margin: 0;
+      background: #4b6cb7; 
+      background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+      color: white;
+      font-size: 28px;
+      letter-spacing: 1px;
+    }
+
+    .container {
+      width: 95%;
+      margin: 20px auto;
+    }
+
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
+      transition: transform 0.25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .row {
+      display: flex;
+      gap: 20px;
+    }
+
+    .col {
+      flex: 1;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #4b6cb7;
+      color: white;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background: #182848;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #182848;
+      color: white;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-left: 8px;
+    }
+
+    .pipeline {
+      display: flex;
+      justify-content: space-between;
+      margin: 30px 0;
+    }
+
+    .stage {
+      text-align: center;
+      flex: 1;
+      position: relative;
+    }
+
+    .stage .box {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      font-weight: bold;
+    }
+
+    .arrow {
+      font-size: 28px;
+      font-weight: bold;
+      color: #4b6cb7;
+      margin-top: 12px;
+      animation: arrow-move 1.5s infinite;
+    }
+
+    @keyframes arrow-move {
+      0% { opacity: 0.3; transform: translateX(0); }
+      100% { opacity: 1; transform: translateX(10px); }
+    }
+
+    #toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #4b6cb7;
+      padding: 15px 20px;
+      border-radius: 8px;
+      color: white;
+      display: none;
+      animation: fadeInOut 2s;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+  </style>
+</head>
+
+<body>
+
+<h1>📊 Website Analytics Pipeline (Interactive Visualization)</h1>
+
+<div class="container">
+
+  <div class="pipeline">
+    <div class="stage">
+      <div class="box">Ingestion API</div>
+      <div class="arrow">➡️</div>
+    </div>
+
+    <div class="stage">
+      <div class="box">Redis Queue</div>
+      <div class="arrow">➡️</div>
+    </div>
+
+    <div class="stage">
+      <div class="box">Processor</div>
+      <div class="arrow">➡️</div>
+    </div>
+
+    <div class="stage">
+      <div class="box">SQLite DB</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Send Test Event</h2>
+
+    <input id="site_id" placeholder="Site ID" value="demo123" />
+    <input id="path" placeholder="Path" value="/home" />
+    <input id="user_id" placeholder="User ID" value="u1" />
+
+    <select id="event_type">
+      <option value="page_view">page_view</option>
+    </select>
+
+    <button onclick="sendEvent()">Send Event</button>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <h3>Queue Status</h3>
+      <p>Queue Size: <span id="queue_size" class="badge">0</span></p>
+    </div>
+
+    <div class="card col">
+      <h3>Processor Status</h3>
+      <pre id="last_event" style="font-size:14px;">None</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Today's Stats</h2>
+    <pre id="stats_output">Loading...</pre>
+  </div>
+</div>
+
+<div id="toast">Event Sent ✔</div>
+
+<script>
+
+// ============= DEBUG HELPER =============
+function debug(...msg) {
+  console.log("%cDEBUG:", "color: white; background:black; padding:3px", ...msg);
+}
+
+function showToast() {
+  const toast = document.getElementById("toast");
+  toast.style.display = "block";
+  setTimeout(() => { toast.style.display = "none"; }, 2000);
+}
+
+// =================== SEND EVENT =====================
+async function sendEvent() {
+  const data = {
+    site_id: document.getElementById('site_id').value,
+    path: document.getElementById('path').value,
+    user_id: document.getElementById('user_id').value,
+    event_type: document.getElementById('event_type').value,
+    timestamp: new Date().toISOString()
+  };
+
+  const url = "http://127.0.0.1:3000/event";
+  debug("Sending event to:", url, "Data:", data);
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    debug("Event API response:", res.status);
+
+    showToast();
+  } catch (err) {
+    console.error("❌ ERROR sending event:", err);
+  }
+}
+
+// =================== AUTO REFRESH =====================
+setInterval(async () => {
+
+  // --- Queue Size ---
+  const queueUrl = "http://127.0.0.1:3000/queue-size";
+  debug("Calling queue size:", queueUrl);
+
+  try {
+    let qRes = await fetch(queueUrl);
+    debug("Queue-size response:", qRes.status);
+
+    document.getElementById("queue_size").innerText = await qRes.text();
+  } catch (err) {
+    console.error("❌ ERROR fetching queue-size:", err);
+  }
+
+  // --- Stats ---
+  const statsUrl = "http://127.0.0.1:3001/stats?site_id=demo123&date=2025-11-12";
+  debug("Calling stats:", statsUrl);
+
+  try {
+    let statsRes = await fetch(statsUrl);
+    debug("Stats response:", statsRes.status);
+
+    document.getElementById("stats_output").innerText =
+      JSON.stringify(await statsRes.json(), null, 2);
+  } catch (err) {
+    console.error("❌ ERROR fetching stats:", err);
+  }
+
+  // --- Last Event ---
+  const lastUrl = "http://127.0.0.1:3001/last-event";
+  debug("Calling last-event:", lastUrl);
+
+  try {
+    let leRes = await fetch(lastUrl);
+    debug("Last-event response:", leRes.status);
+
+    document.getElementById("last_event").innerText = await leRes.text();
+  } catch (err) {
+    console.error("❌ ERROR fetching last-event:", err);
+  }
+
+}, 1200);
+
+</script>
+
+
+</body>
+</html>
