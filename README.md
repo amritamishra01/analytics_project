@@ -124,3 +124,25 @@ sqlite3 analytics.db "SELECT * FROM events;"
 Check services are running
 netstat -ano | findstr :3000
 netstat -ano | findstr :3001
+
+
+## 📸 Project Screenshots
+
+### 1️⃣ Dashboard UI
+![Dashboard Screenshot](p1.png)
+
+### 2️⃣ Event Ingestion API Test
+![Ingest API](p2.png)
+
+### 3️⃣ Redis Queue Verification
+![Redis Check](p3.png)
+
+### 4️⃣ Processor Running
+![Processor](p4.png)
+
+### 5️⃣ Reporting API Output
+![Reporting](p5.png)
+
+### 6️⃣ Final Dashboard View
+![Final Dashboard](p6.png)
+
